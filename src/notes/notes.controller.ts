@@ -6,11 +6,15 @@ import {
   Patch,
   Param,
   Delete,
+  Query,
+  ParseIntPipe,
+  HttpCode,
 } from '@nestjs/common';
 import { NotesService } from './notes.service';
 import { CreateNoteDto } from './dto/create-note.dto';
 import { UpdateNoteDto } from './dto/update-note.dto';
 import { NoteTag } from './enums/note-tag.enum';
+import { QueryNoteDto } from './dto/query-note-dto';
 
 @Controller('notes')
 export class NotesController {
@@ -27,22 +31,26 @@ export class NotesController {
   }
 
   @Get()
-  findAll() {
-    return this.notesService.findAll();
+  findAll(@Query() queryDto: QueryNoteDto) {
+    return this.notesService.findAll(queryDto);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.notesService.findOne(+id);
+  findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.notesService.findOne(id);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateNoteDto: UpdateNoteDto) {
-    return this.notesService.update(+id, updateNoteDto);
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateNoteDto: UpdateNoteDto,
+  ) {
+    return this.notesService.update(id, updateNoteDto);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.notesService.remove(+id);
+  @HttpCode(204)
+  remove(@Param('id', ParseIntPipe) id: number) {
+    return this.notesService.remove(id);
   }
 }
