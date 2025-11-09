@@ -1,37 +1,27 @@
+import { Note } from 'src/notes/entities/note.entity';
+import { Session } from 'src/sessions/entities/session.entity';
 import {
   Column,
   CreateDateColumn,
   Entity,
-  ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { NoteTag } from '../enums/note-tag.enum';
-import { User } from 'src/users/entities/user.entity';
 
 @Entity()
-export class Note {
+export class User {
   @PrimaryGeneratedColumn()
   id: number;
 
   @Column()
-  title: string;
+  name: string;
 
   @Column()
-  content: string;
+  email: string;
 
-  @Column({ default: false })
-  isDone: boolean;
-
-  @Column({
-    type: 'enum',
-    enum: NoteTag,
-    default: NoteTag.Todo,
-  })
-  tag: NoteTag;
-
-  @ManyToOne(() => User)
-  user: User;
+  @Column()
+  password: string;
 
   @CreateDateColumn({
     type: 'timestamp',
@@ -45,4 +35,10 @@ export class Note {
     onUpdate: 'CURRENT_TIMESTAMP(6)',
   })
   updatedAt: Date;
+
+  @OneToMany(() => Note, (note) => note.user)
+  notes: Note[];
+
+  @OneToMany(() => Session, (session) => session.user)
+  sessions: Session[];
 }
