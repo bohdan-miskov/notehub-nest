@@ -2,10 +2,13 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  ManyToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { NoteTag } from '../enums/note-tag.enum';
+import { User } from 'src/users/entities/user.entity';
+import { Exclude } from 'class-transformer';
 
 @Entity()
 export class Note {
@@ -27,6 +30,10 @@ export class Note {
     default: NoteTag.Todo,
   })
   tag: NoteTag;
+
+  @ManyToOne(() => User, (user) => user.notes, { eager: false })
+  @Exclude({ toPlainOnly: true })
+  user: User;
 
   @CreateDateColumn({
     type: 'timestamp',

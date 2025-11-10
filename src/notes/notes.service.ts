@@ -18,12 +18,18 @@ export class NotesService {
     private readonly noteRepository: Repository<Note>,
   ) {}
 
-  async create(createNoteDto: CreateNoteDto): Promise<Note> {
-    const note = this.noteRepository.create(createNoteDto);
+  async create(createNoteDto: CreateNoteDto, userId: number): Promise<Note> {
+    const note = this.noteRepository.create({
+      ...createNoteDto,
+      user: { id: userId },
+    });
     return this.noteRepository.save(note);
   }
 
-  async findAll(queryDto: QueryNoteDto): Promise<PaginatedResult<Note>> {
+  async findAll(
+    queryDto: QueryNoteDto,
+    userId: number,
+  ): Promise<PaginatedResult<Note>> {
     const {
       page = 1,
       perPage = 10,
@@ -40,7 +46,8 @@ export class NotesService {
     const where: {
       tag?: NoteTag;
       isDone?: boolean;
-    } = {};
+      user?: object;
+    } = { user: { id: userId } };
 
     if (tag !== undefined) {
       where.tag = tag;
@@ -71,8 +78,11 @@ export class NotesService {
     return createPaginatedResponse<Note>(data, page, perPage);
   }
 
-  async findOne(id: number): Promise<Note> {
-    const note = await this.noteRepository.findOneBy({ id });
+  async findOne(id: number, userId: number): Promise<Note> {
+    const note = await this.noteRepository.findOneBy({
+      id,
+      user: { id: userId },
+    });
 
     if (!note) {
       throw new NotFoundException(`Note with ID #${id} not found`);
@@ -80,9 +90,14 @@ export class NotesService {
     return note;
   }
 
-  async update(id: number, updateNoteDto: UpdateNoteDto): Promise<Note> {
+  async update(
+    id: number,
+    updateNoteDto: UpdateNoteDto,
+    userId: number,
+  ): Promise<Note> {
+    const noteToUpdate = await this.findOne(id, userId);
     const note = await this.noteRepository.preload({
-      id: id,
+      ...noteToUpdate,
       ...updateNoteDto,
     });
 
@@ -93,8 +108,8 @@ export class NotesService {
     return this.noteRepository.save(note);
   }
 
-  async remove(id: number): Promise<void> {
-    const note = await this.findOne(id);
+  async remove(id: number, userId: number): Promise<void> {
+    const note = await this.findOne(id, userId);
 
     await this.noteRepository.remove(note);
   }
