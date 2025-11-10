@@ -56,6 +56,7 @@ export class AuthController {
   }
 
   @Post('refresh')
+  @UseGuards(AuthGuard('jwt-refresh'))
   async refreshTokens(
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
