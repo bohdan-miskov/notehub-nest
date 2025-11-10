@@ -23,9 +23,6 @@ export class Session {
   @Column()
   expiresAt: Date;
 
-  @CreateDateColumn({
-    type: 'timestamp',
-    default: 'CURRENT_TIMESTAMP(6)',
-  })
+  @CreateDateColumn()
   createdAt: Date;
 }
