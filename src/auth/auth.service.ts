@@ -87,7 +87,8 @@ export class AuthService {
   }
 
   private async _getAndSaveTokens(user: User) {
-    const rsaRefreshExpiresDays = 7;
+    const rsaRefreshExpiresDays =
+      this.configService.get<number>('JWT_REFRESH_EXPIRES_DAYS') ?? 7;
     const refreshExpiresAt = new Date();
     refreshExpiresAt.setDate(
       refreshExpiresAt.getDate() + rsaRefreshExpiresDays,
@@ -98,7 +99,7 @@ export class AuthService {
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload, {
         secret: this.configService.get<string>('JWT_SECRET'),
-        expiresIn: '15m',
+        expiresIn: `${this.configService.get<number>('JWT_ACCESS_EXPIRES_MINUTES') ?? 15}m`,
       }),
       this.jwtService.signAsync(payload, {
         secret: this.configService.get<string>('JWT_SECRET'),
