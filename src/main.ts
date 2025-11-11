@@ -18,7 +18,7 @@ async function bootstrap() {
   app.use(cookieParser());
 
   const config = new DocumentBuilder()
-    .setTitle('NoteHun API')
+    .setTitle('NoteHub API')
     .setDescription('REST API documentation for the NoteHub project')
     .setVersion('1.0')
     .addCookieAuth('accessToken')
