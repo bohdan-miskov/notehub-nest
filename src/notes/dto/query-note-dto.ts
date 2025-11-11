@@ -3,7 +3,7 @@ import { IsBoolean, IsEnum, IsOptional, IsString } from 'class-validator';
 import { NoteTag } from '../enums/note-tag.enum';
 import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
 import { SortOrder } from 'src/common/enums/sort-order.enum';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 
 enum SortBy {
   Id = 'id',
@@ -13,7 +13,7 @@ enum SortBy {
 }
 
 export class QueryNoteDto extends PaginationQueryDto {
-  @ApiProperty({
+  @ApiPropertyOptional({
     example: 'english',
     description: 'Searchable content in note title or content',
   })
@@ -21,7 +21,7 @@ export class QueryNoteDto extends PaginationQueryDto {
   @IsString()
   search?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     example: NoteTag.Work,
     description: 'Note tag for filtering',
   })
@@ -29,7 +29,7 @@ export class QueryNoteDto extends PaginationQueryDto {
   @IsEnum(NoteTag)
   tag?: NoteTag;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     example: false,
     description: 'Note execution status for filtering',
   })
@@ -38,7 +38,7 @@ export class QueryNoteDto extends PaginationQueryDto {
   @Transform(({ value }) => value === 'true' || value === true)
   isDone?: boolean;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     example: SortBy.Title,
     description: 'Sorting note field name',
   })
@@ -47,7 +47,7 @@ export class QueryNoteDto extends PaginationQueryDto {
   @IsEnum(SortBy)
   sortBy: SortBy = SortBy.Id;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     example: SortOrder.ASC,
     description: 'Sort order',
   })

@@ -2,6 +2,8 @@ import {
   Body,
   Controller,
   ForbiddenException,
+  HttpCode,
+  HttpStatus,
   Post,
   Req,
   Res,
@@ -42,7 +44,7 @@ export class AuthController {
     return { message: 'Registration successful' };
   }
 
-  @ApiResponse({ status: 201, description: 'User successfully logged in.' })
+  @ApiResponse({ status: 200, description: 'User successfully logged in.' })
   @ApiResponse({
     status: 400,
     description: 'Validation failed.',
@@ -51,6 +53,7 @@ export class AuthController {
     status: 401,
     description: 'Email or password is invalid',
   })
+  @HttpCode(HttpStatus.OK)
   @Post('login')
   async login(
     @Body() loginDto: LoginDto,
@@ -61,9 +64,10 @@ export class AuthController {
     return { message: 'Login successful' };
   }
 
-  @ApiResponse({ status: 201, description: 'User successfully logged out.' })
-  @Post('logout')
+  @ApiResponse({ status: 200, description: 'User successfully logged out.' })
   @UseGuards(AuthGuard('jwt'))
+  @HttpCode(HttpStatus.OK)
+  @Post('logout')
   async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const refreshToken = req.cookies.refreshToken as string;
 
@@ -77,13 +81,14 @@ export class AuthController {
   }
 
   @ApiCookieAuth('refreshToken')
-  @ApiResponse({ status: 201, description: 'Token successfully refreshed.' })
+  @ApiResponse({ status: 200, description: 'Token successfully refreshed.' })
   @ApiResponse({
     status: 403,
     description: 'The token is invalid or has expired',
   })
-  @Post('refresh')
   @UseGuards(AuthGuard('jwt-refresh'))
+  @HttpCode(HttpStatus.OK)
+  @Post('refresh')
   async refreshTokens(
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,

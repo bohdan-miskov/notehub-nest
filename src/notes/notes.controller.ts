@@ -20,6 +20,7 @@ import { QueryNoteDto } from './dto/query-note-dto';
 import { AuthGuard } from '@nestjs/passport';
 import { type Request } from 'express';
 import { ApiCookieAuth, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Note } from './entities/note.entity';
 
 @ApiTags('2. Notes')
 @ApiCookieAuth('accessToken')
@@ -32,13 +33,28 @@ import { ApiCookieAuth, ApiResponse, ApiTags } from '@nestjs/swagger';
 export class NotesController {
   constructor(private readonly notesService: NotesService) {}
 
-  @ApiResponse({ status: 200, description: 'Tags successfully found' })
+  @ApiResponse({
+    status: 200,
+    description: 'Tags successfully found',
+    schema: {
+      type: 'array',
+      items: {
+        type: 'string',
+        enum: Object.values(NoteTag),
+        example: NoteTag.Work,
+      },
+    },
+  })
   @Get('tags')
   getNoteTags() {
     return Object.values(NoteTag);
   }
 
-  @ApiResponse({ status: 201, description: 'Note successfully created' })
+  @ApiResponse({
+    status: 201,
+    description: 'Note successfully created',
+    type: Note,
+  })
   @ApiResponse({
     status: 400,
     description: 'Your data is invalid',
@@ -49,7 +65,11 @@ export class NotesController {
     return this.notesService.create(createNoteDto, userId);
   }
 
-  @ApiResponse({ status: 200, description: 'Notes successfully found' })
+  @ApiResponse({
+    status: 200,
+    description: 'Notes successfully found',
+    type: [Note],
+  })
   @ApiResponse({
     status: 400,
     description: 'Your query is invalid',
@@ -60,7 +80,11 @@ export class NotesController {
     return this.notesService.findAll(queryDto, userId);
   }
 
-  @ApiResponse({ status: 200, description: 'Note successfully found' })
+  @ApiResponse({
+    status: 200,
+    description: 'Note successfully found',
+    type: Note,
+  })
   @ApiResponse({
     status: 404,
     description: 'Note is not found',
@@ -71,7 +95,11 @@ export class NotesController {
     return this.notesService.findOne(id, userId);
   }
 
-  @ApiResponse({ status: 201, description: 'Note successfully updated' })
+  @ApiResponse({
+    status: 200,
+    description: 'Note successfully updated',
+    type: Note,
+  })
   @ApiResponse({
     status: 400,
     description: 'Your data is invalid',
