@@ -7,7 +7,7 @@ import {
   MinLength,
 } from 'class-validator';
 import { NoteTag } from '../enums/note-tag.enum';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateNoteDto {
   @ApiProperty({
@@ -27,7 +27,7 @@ export class CreateNoteDto {
   @IsNotEmpty()
   content: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     example: false,
     description: 'Note execution status',
   })
@@ -35,7 +35,7 @@ export class CreateNoteDto {
   @IsOptional()
   isDone?: boolean;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     example: NoteTag.Work,
     description: 'Note tag',
   })
