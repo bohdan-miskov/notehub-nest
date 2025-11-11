@@ -4,6 +4,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { type Request } from 'express';
 import { ApiCookieAuth, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { User } from './entities/user.entity';
 
 @ApiTags('3. Users')
 @ApiCookieAuth('accessToken')
@@ -16,7 +17,11 @@ import { ApiCookieAuth, ApiResponse, ApiTags } from '@nestjs/swagger';
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  @ApiResponse({ status: 200, description: 'User successfully found' })
+  @ApiResponse({
+    status: 200,
+    description: 'User successfully found',
+    type: User,
+  })
   @ApiResponse({
     status: 404,
     description: 'User not found',
@@ -27,7 +32,11 @@ export class UsersController {
     return this.usersService.findOne(userId);
   }
 
-  @ApiResponse({ status: 201, description: 'User info successfully updated.' })
+  @ApiResponse({
+    status: 200,
+    description: 'User info successfully updated.',
+    type: User,
+  })
   @ApiResponse({
     status: 404,
     description: 'User not found',

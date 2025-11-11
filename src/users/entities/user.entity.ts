@@ -1,3 +1,4 @@
+import { Exclude } from 'class-transformer';
 import { Note } from 'src/notes/entities/note.entity';
 import { Session } from 'src/sessions/entities/session.entity';
 import {
@@ -21,6 +22,7 @@ export class User {
   email: string;
 
   @Column()
+  @Exclude({ toPlainOnly: true })
   password: string;
 
   @CreateDateColumn()
@@ -30,8 +32,10 @@ export class User {
   updatedAt: Date;
 
   @OneToMany(() => Note, (note) => note.user)
+  @Exclude({ toPlainOnly: true })
   notes: Note[];
 
   @OneToMany(() => Session, (session) => session.user)
+  @Exclude({ toPlainOnly: true })
   sessions: Session[];
 }
