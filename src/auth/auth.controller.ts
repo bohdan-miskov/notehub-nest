@@ -13,7 +13,9 @@ import { ConfigService } from '@nestjs/config';
 import { type Request, type Response } from 'express';
 import { LoginDto } from './dto/login.dto';
 import { AuthGuard } from '@nestjs/passport';
+import { ApiCookieAuth, ApiResponse, ApiTags } from '@nestjs/swagger';
 
+@ApiTags('1. Auth')
 @Controller('auth')
 export class AuthController {
   constructor(
@@ -21,6 +23,15 @@ export class AuthController {
     private readonly configService: ConfigService,
   ) {}
 
+  @ApiResponse({ status: 201, description: 'User successfully created.' })
+  @ApiResponse({
+    status: 400,
+    description: 'Validation failed.',
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'User with this email already exists.',
+  })
   @Post('register')
   async register(
     @Body() registerDto: RegisterDto,
@@ -31,6 +42,15 @@ export class AuthController {
     return { message: 'Registration successful' };
   }
 
+  @ApiResponse({ status: 201, description: 'User successfully logged in.' })
+  @ApiResponse({
+    status: 400,
+    description: 'Validation failed.',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Email or password is invalid',
+  })
   @Post('login')
   async login(
     @Body() loginDto: LoginDto,
@@ -41,6 +61,7 @@ export class AuthController {
     return { message: 'Login successful' };
   }
 
+  @ApiResponse({ status: 201, description: 'User successfully logged out.' })
   @Post('logout')
   @UseGuards(AuthGuard('jwt'))
   async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
@@ -55,6 +76,12 @@ export class AuthController {
     return { message: 'Logout successful' };
   }
 
+  @ApiCookieAuth('refreshToken')
+  @ApiResponse({ status: 201, description: 'Token successfully refreshed.' })
+  @ApiResponse({
+    status: 403,
+    description: 'The token is invalid or has expired',
+  })
   @Post('refresh')
   @UseGuards(AuthGuard('jwt-refresh'))
   async refreshTokens(
