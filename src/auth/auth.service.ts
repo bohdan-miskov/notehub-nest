@@ -10,6 +10,7 @@ import { SessionsService } from 'src/sessions/sessions.service';
 import { UsersService } from 'src/users/users.service';
 import { RegisterDto } from './dto/register.dto';
 import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
 import { User } from 'src/users/entities/user.entity';
 import { LoginDto } from './dto/login.dto';
 
@@ -30,7 +31,7 @@ export class AuthService {
       throw new ConflictException('User with this email already exists');
     }
 
-    const hashedPassword = await this._hashData(password);
+    const hashedPassword = await this._hashPassword(password);
     const user = await this.usersService.create({
       ...registerDto,
       password: hashedPassword,
@@ -58,12 +59,12 @@ export class AuthService {
   }
 
   async logout(refreshToken: string) {
-    const hash = await this._hashData(refreshToken);
+    const hash = this._hashToken(refreshToken);
     await this.sessionsService.deleteSession(hash);
   }
 
   async refreshTokens(refreshToken: string) {
-    const hashedToken = await this._hashData(refreshToken);
+    const hashedToken = this._hashToken(refreshToken);
 
     const session = await this.sessionsService.findSessionByHash(hashedToken);
 
@@ -82,8 +83,12 @@ export class AuthService {
     return tokens;
   }
 
-  private async _hashData(data: string) {
+  private async _hashPassword(data: string) {
     return bcrypt.hash(data, 10);
+  }
+
+  private _hashToken(token: string) {
+    return crypto.createHash('sha256').update(token).digest('hex');
   }
 
   private async _getAndSaveTokens(user: User) {
@@ -107,7 +112,7 @@ export class AuthService {
       }),
     ]);
 
-    const refreshTokenHash = await this._hashData(refreshToken);
+    const refreshTokenHash = this._hashToken(refreshToken);
 
     await this.sessionsService.createSession(
       user,
