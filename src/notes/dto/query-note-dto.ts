@@ -5,7 +5,7 @@ import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
 import { SortOrder } from 'src/common/enums/sort-order.enum';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
-enum SortBy {
+export enum SortBy {
   Id = 'id',
   Title = 'title',
   CreatedAt = 'createdAt',

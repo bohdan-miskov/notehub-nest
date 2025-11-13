@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Session } from './entities/session.entity';
-import { User } from 'src/users/entities/user.entity';
+import { CreateSessionDto } from './dto/create-session.dto';
 
 @Injectable()
 export class SessionsService {
@@ -11,27 +11,19 @@ export class SessionsService {
     private readonly sessionRepository: Repository<Session>,
   ) {}
 
-  async createSession(
-    user: User,
-    refreshTokenHash: string,
-    expiresAt: Date,
-  ): Promise<Session> {
-    const session = this.sessionRepository.create({
-      user,
-      refreshTokenHash,
-      expiresAt,
-    });
+  async create(createSessionDto: CreateSessionDto): Promise<Session> {
+    const session = this.sessionRepository.create(createSessionDto);
     return this.sessionRepository.save(session);
   }
 
-  async findSessionByHash(refreshTokenHash: string): Promise<Session | null> {
+  async findByHash(refreshTokenHash: string): Promise<Session | null> {
     return this.sessionRepository.findOne({
       where: { refreshTokenHash },
       relations: ['user'],
     });
   }
 
-  async deleteSession(refreshTokenHash: string): Promise<void> {
+  async removeByHash(refreshTokenHash: string): Promise<void> {
     await this.sessionRepository.delete({ refreshTokenHash });
   }
 
