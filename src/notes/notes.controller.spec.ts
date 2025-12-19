@@ -9,7 +9,7 @@ import { Note } from './entities/note.entity';
 import { User } from 'src/users/entities/user.entity';
 import { QueryNoteDto, SortBy } from './dto/query-note-dto';
 import { SortOrder } from 'src/common/enums/sort-order.enum';
-import { createPaginatedResponse } from 'src/common/utils/pagination.util';
+import { createPaginatedResponse } from 'src/common/utils/pagination';
 import { UpdateNoteDto } from './dto/update-note.dto';
 
 function mockServiceFactory<T extends object>(): MockService<T> {

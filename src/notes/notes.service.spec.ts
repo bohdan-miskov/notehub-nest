@@ -9,7 +9,7 @@ import { NoteTag } from './enums/note-tag.enum';
 import { UpdateNoteDto } from './dto/update-note.dto';
 import { User } from 'src/users/entities/user.entity';
 import { QueryNoteDto, SortBy } from './dto/query-note-dto';
-import { createPaginatedResponse } from 'src/common/utils/pagination.util';
+import { createPaginatedResponse } from 'src/common/utils/pagination';
 import { SortOrder } from 'src/common/enums/sort-order.enum';
 import { MockRepository } from 'src/common/types/mock.types';
 

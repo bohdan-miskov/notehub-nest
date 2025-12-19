@@ -8,7 +8,7 @@ import { QueryNoteDto } from './dto/query-note-dto';
 import {
   createPaginatedResponse,
   PaginatedResult,
-} from 'src/common/utils/pagination.util';
+} from 'src/common/utils/pagination';
 import { NoteTag } from './enums/note-tag.enum';
 
 @Injectable()
