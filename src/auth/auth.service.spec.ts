@@ -8,7 +8,8 @@ import { ConfigService } from '@nestjs/config';
 import { RegisterDto } from './dto/register.dto';
 import { User } from 'src/users/entities/user.entity';
 import * as bcrypt from 'bcrypt';
-import { ConflictException } from '@nestjs/common';
+import { ConflictException, UnauthorizedException } from '@nestjs/common';
+import { LoginDto } from './dto/login.dto';
 
 function mockServiceFactory<T extends object>(): MockService<T> {
   return {
@@ -148,6 +149,90 @@ describe('AuthService', () => {
 
       expect(mockUsersService.findOneByEmail).toHaveBeenCalledWith(
         registerDto.email,
+      );
+    });
+  });
+
+  describe('login', () => {
+    it('should successfully login user', async () => {
+      const loginDto: LoginDto = {
+        email: 'user@mock.com',
+        password: 'password',
+      };
+
+      const accessToken = 'accessToken';
+      const refreshToken = 'refreshToken';
+
+      const mockUser = mockUserFactory({
+        ...loginDto,
+        password: 'hashedPassword',
+      });
+      mockUsersService.findOneByEmail?.mockResolvedValue(mockUser);
+
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+      mockConfigService.get?.mockReturnValue(null);
+
+      mockJwtService.signAsync?.mockResolvedValueOnce(accessToken);
+      mockJwtService.signAsync?.mockResolvedValueOnce(refreshToken);
+
+      const result = await service.login(loginDto);
+      expect(result).toEqual({
+        accessToken,
+        refreshToken,
+      });
+
+      expect(mockUsersService.findOneByEmail).toHaveBeenCalledWith(
+        loginDto.email,
+      );
+      expect(bcrypt.compare).toHaveBeenCalledWith(
+        loginDto.password,
+        mockUser.password,
+      );
+      expect(mockSessionsService.create).toHaveBeenCalledWith({
+        user: mockUser,
+        refreshTokenHash: expect.any(String) as string,
+        expiresAt: expect.any(Date) as Date,
+      });
+    });
+    it('should throw UnauthorizedException if user not exist', async () => {
+      const loginDto: LoginDto = {
+        email: 'user@mock.com',
+        password: 'password',
+      };
+      mockUsersService.findOneByEmail?.mockResolvedValue(null);
+
+      await expect(service.login(loginDto)).rejects.toThrow(
+        UnauthorizedException,
+      );
+
+      expect(mockUsersService.findOneByEmail).toHaveBeenCalledWith(
+        loginDto.email,
+      );
+    });
+    it('should throw UnauthorizedException if password is not correct', async () => {
+      const loginDto: LoginDto = {
+        email: 'user@mock.com',
+        password: 'password',
+      };
+
+      const mockUser = mockUserFactory({
+        ...loginDto,
+        password: 'hashedPassword',
+      });
+      mockUsersService.findOneByEmail?.mockResolvedValue(mockUser);
+
+      (bcrypt.compare as jest.Mock).mockResolvedValue(false);
+
+      await expect(service.login(loginDto)).rejects.toThrow(
+        UnauthorizedException,
+      );
+
+      expect(mockUsersService.findOneByEmail).toHaveBeenCalledWith(
+        loginDto.email,
+      );
+      expect(bcrypt.compare).toHaveBeenCalledWith(
+        loginDto.password,
+        mockUser.password,
       );
     });
   });
