@@ -4,15 +4,18 @@ import { RegisterDto } from 'src/auth/dto/register.dto';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { LoginDto } from 'src/auth/dto/login.dto';
+import { getCookies } from './utils/helpers';
 
 describe('AuthModule (e2e)', () => {
   let testApp: TestApp;
   let app: INestApplication;
   let appCookies: string[];
 
+  const uniqueId = Date.now();
+
   const userDto = {
     name: 'testUser',
-    email: 'test@mock.com',
+    email: `test${uniqueId}@mock.com`,
     password: 'mockPassword',
   };
 
@@ -36,7 +39,7 @@ describe('AuthModule (e2e)', () => {
         .expect(201)
         .expect((res) => {
           const body = res.body as { message: string };
-          appCookies = res.headers['set-cookie'] as unknown as string[];
+          appCookies = getCookies(res);
 
           expect(body?.message).toBe('Registration successful');
           expect(appCookies).toBeDefined();
@@ -66,7 +69,7 @@ describe('AuthModule (e2e)', () => {
         .expect(200)
         .expect((res) => {
           const body = res.body as { message: string };
-          appCookies = res.headers['set-cookie'] as unknown as string[];
+          appCookies = getCookies(res);
 
           expect(body.message).toBe('Login successful');
           expect(appCookies).toBeDefined();
@@ -95,7 +98,7 @@ describe('AuthModule (e2e)', () => {
         .expect(200)
         .expect((res) => {
           const body = res.body as { message: string };
-          appCookies = res.headers['set-cookie'] as unknown as string[];
+          appCookies = getCookies(res);
 
           expect(body.message).toBe('Tokens refreshed');
           expect(appCookies).toBeDefined();
@@ -119,7 +122,7 @@ describe('AuthModule (e2e)', () => {
         .expect((res) => {
           const body = res.body as { message: string };
 
-          appCookies = res.headers['set-cookie'] as unknown as string[];
+          appCookies = getCookies(res);
           expect(body.message).toBe('Logout successful');
           expect(appCookies).toBeDefined();
           expect(appCookies.some((c) => c.includes('accessToken=;')));
