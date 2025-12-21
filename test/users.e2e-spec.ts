@@ -4,12 +4,12 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { RegisterDto } from 'src/auth/dto/register.dto';
 import { UpdateUserDto } from 'src/users/dto/update-user.dto';
-import { getCookies } from './utils/helpers';
+import { registerUser } from './utils/helpers';
 
 describe('UsersModule (e2e)', () => {
   let testApp: TestApp;
   let app: INestApplication;
-  let appCookies: string[];
+  let userCookies: string[];
 
   const uniqueId = Date.now();
 
@@ -33,12 +33,7 @@ describe('UsersModule (e2e)', () => {
     await testApp.cleanup();
 
     const registerDto: RegisterDto = { ...userDto };
-    const response = await request(app.getHttpServer() as App)
-      .post('/auth/register')
-      .send(registerDto)
-      .expect(201);
-
-    appCookies = getCookies(response);
+    userCookies = await registerUser(app, registerDto);
   });
 
   afterAll(async () => {
@@ -49,7 +44,7 @@ describe('UsersModule (e2e)', () => {
     it('should return current user profile (200)', () => {
       return request(app.getHttpServer() as App)
         .get('/users/me')
-        .set('Cookie', appCookies)
+        .set('Cookie', userCookies)
         .expect(200)
         .expect((res) => {
           expect(res.body).toEqual(responseUser);
@@ -66,7 +61,7 @@ describe('UsersModule (e2e)', () => {
     it('should update user name successfully (200)', async () => {
       const beforeUpdateRes = await request(app.getHttpServer() as App)
         .get('/users/me')
-        .set('Cookie', appCookies)
+        .set('Cookie', userCookies)
         .expect(200);
 
       const oldBody = beforeUpdateRes.body as { updatedAt: string };
@@ -81,7 +76,7 @@ describe('UsersModule (e2e)', () => {
       };
       return request(app.getHttpServer() as App)
         .patch('/users/me')
-        .set('Cookie', appCookies)
+        .set('Cookie', userCookies)
         .send(updateUserDto)
         .expect(200)
         .expect((res) => {
@@ -104,7 +99,7 @@ describe('UsersModule (e2e)', () => {
     it('should fail validation when name is empty (400)', () => {
       return request(app.getHttpServer() as App)
         .patch('/users/me')
-        .set('Cookie', appCookies)
+        .set('Cookie', userCookies)
         .send({ name: '' })
         .expect(400)
         .expect((res) => {

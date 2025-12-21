@@ -9,7 +9,7 @@ import { getCookies } from './utils/helpers';
 describe('AuthModule (e2e)', () => {
   let testApp: TestApp;
   let app: INestApplication;
-  let appCookies: string[];
+  let userCookies: string[];
 
   const uniqueId = Date.now();
 
@@ -39,12 +39,12 @@ describe('AuthModule (e2e)', () => {
         .expect(201)
         .expect((res) => {
           const body = res.body as { message: string };
-          appCookies = getCookies(res);
+          userCookies = getCookies(res);
 
           expect(body?.message).toBe('Registration successful');
-          expect(appCookies).toBeDefined();
-          expect(appCookies.some((c) => c.includes('accessToken')));
-          expect(appCookies.some((c) => c.includes('refreshToken')));
+          expect(userCookies).toBeDefined();
+          expect(userCookies.some((c) => c.includes('accessToken')));
+          expect(userCookies.some((c) => c.includes('refreshToken')));
         });
     });
     it('should fail if email already exists (409)', () => {
@@ -69,12 +69,12 @@ describe('AuthModule (e2e)', () => {
         .expect(200)
         .expect((res) => {
           const body = res.body as { message: string };
-          appCookies = getCookies(res);
+          userCookies = getCookies(res);
 
           expect(body.message).toBe('Login successful');
-          expect(appCookies).toBeDefined();
-          expect(appCookies.some((c) => c.includes('accessToken')));
-          expect(appCookies.some((c) => c.includes('refreshToken')));
+          expect(userCookies).toBeDefined();
+          expect(userCookies.some((c) => c.includes('accessToken')));
+          expect(userCookies.some((c) => c.includes('refreshToken')));
         });
     });
     it('should fail with wrong password (401)', () => {
@@ -94,16 +94,16 @@ describe('AuthModule (e2e)', () => {
     it('should return new tokens using valid Refresh Token cookie (200)', () => {
       return request(app.getHttpServer() as App)
         .post('/auth/refresh')
-        .set('Cookie', appCookies)
+        .set('Cookie', userCookies)
         .expect(200)
         .expect((res) => {
           const body = res.body as { message: string };
-          appCookies = getCookies(res);
+          userCookies = getCookies(res);
 
           expect(body.message).toBe('Tokens refreshed');
-          expect(appCookies).toBeDefined();
-          expect(appCookies.some((c) => c.includes('accessToken')));
-          expect(appCookies.some((c) => c.includes('refreshToken')));
+          expect(userCookies).toBeDefined();
+          expect(userCookies.some((c) => c.includes('accessToken')));
+          expect(userCookies.some((c) => c.includes('refreshToken')));
         });
     });
     it('should fail if Refresh Token is missing or invalid (401)', () => {
@@ -117,22 +117,22 @@ describe('AuthModule (e2e)', () => {
     it('should clear cookies from response headers (200)', () => {
       return request(app.getHttpServer() as App)
         .post('/auth/logout')
-        .set('Cookie', appCookies)
+        .set('Cookie', userCookies)
         .expect(200)
         .expect((res) => {
           const body = res.body as { message: string };
 
-          appCookies = getCookies(res);
+          userCookies = getCookies(res);
           expect(body.message).toBe('Logout successful');
-          expect(appCookies).toBeDefined();
-          expect(appCookies.some((c) => c.includes('accessToken=;')));
-          expect(appCookies.some((c) => c.includes('refreshToken=;')));
+          expect(userCookies).toBeDefined();
+          expect(userCookies.some((c) => c.includes('accessToken=;')));
+          expect(userCookies.some((c) => c.includes('refreshToken=;')));
         });
     });
     it('should fail to refresh tokens after logout (401)', () => {
       return request(app.getHttpServer() as App)
         .post('/auth/refresh')
-        .set('Cookie', appCookies)
+        .set('Cookie', userCookies)
         .expect(401);
     });
   });
