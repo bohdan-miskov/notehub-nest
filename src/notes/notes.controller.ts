@@ -28,7 +28,6 @@ import { Note } from './entities/note.entity';
   status: 401,
   description: 'Tokens are invalid or expired',
 })
-@UseGuards(AuthGuard('jwt'))
 @Controller('notes')
 export class NotesController {
   constructor(private readonly notesService: NotesService) {}
@@ -59,6 +58,7 @@ export class NotesController {
     status: 400,
     description: 'Your data is invalid',
   })
+  @UseGuards(AuthGuard('jwt'))
   @Post()
   create(@Body() createNoteDto: CreateNoteDto, @Req() req: Request) {
     const userId = req.user?.id as number;
@@ -74,6 +74,7 @@ export class NotesController {
     status: 400,
     description: 'Your query is invalid',
   })
+  @UseGuards(AuthGuard('jwt'))
   @Get()
   findAll(@Query() queryDto: QueryNoteDto, @Req() req: Request) {
     const userId = req.user?.id as number;
@@ -89,6 +90,7 @@ export class NotesController {
     status: 404,
     description: 'Note is not found',
   })
+  @UseGuards(AuthGuard('jwt'))
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number, @Req() req: Request) {
     const userId = req.user?.id as number;
@@ -108,6 +110,7 @@ export class NotesController {
     status: 404,
     description: 'Note is not found',
   })
+  @UseGuards(AuthGuard('jwt'))
   @Patch(':id')
   update(
     @Param('id', ParseIntPipe) id: number,
@@ -119,8 +122,9 @@ export class NotesController {
   }
 
   @ApiResponse({ status: 204, description: 'Note successfully deleted' })
-  @Delete(':id')
   @HttpCode(204)
+  @UseGuards(AuthGuard('jwt'))
+  @Delete(':id')
   remove(@Param('id', ParseIntPipe) id: number, @Req() req: Request) {
     const userId = req.user?.id as number;
     return this.notesService.remove(id, userId);
