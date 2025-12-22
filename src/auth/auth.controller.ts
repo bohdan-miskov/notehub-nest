@@ -40,8 +40,7 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const tokens = await this.authService.register(registerDto);
-    this._setCookies(res, tokens);
-    return { message: 'Registration successful' };
+    return this._setCookies(res, tokens);
   }
 
   @ApiResponse({ status: 200, description: 'User successfully logged in.' })
@@ -60,23 +59,20 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const tokens = await this.authService.login(loginDto);
-    this._setCookies(res, tokens);
-    return { message: 'Login successful' };
+    return this._setCookies(res, tokens);
   }
 
   @ApiResponse({ status: 200, description: 'User successfully logged out.' })
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(AuthGuard('jwt-refresh'))
   @HttpCode(HttpStatus.OK)
   @Post('logout')
-  async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    const refreshToken = req.cookies.refreshToken as string;
+  async logout(@Req() req: Request) {
+    const refreshToken = req.user?.refreshToken as string;
 
     if (refreshToken) {
       await this.authService.logout(refreshToken);
     }
 
-    res.clearCookie('accessToken');
-    res.clearCookie('refreshToken');
     return { message: 'Logout successful' };
   }
 
@@ -93,35 +89,25 @@ export class AuthController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const refreshToken = req.cookies.refreshToken as string;
+    const refreshToken = req.user?.refreshToken as string;
     if (!refreshToken) {
       throw new ForbiddenException('Refresh token not found');
     }
 
     const tokens = await this.authService.refreshTokens(refreshToken);
-    this._setCookies(res, tokens);
-    return { message: 'Tokens refreshed' };
+    return this._setCookies(res, tokens);
   }
 
   private _setCookies(
     res: Response,
     tokens: { accessToken: string; refreshToken: string },
   ) {
-    const isProduction =
-      this.configService.get<string>('NODE_ENV') === 'production';
-
-    res.cookie('accessToken', tokens.accessToken, {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: 'strict',
-      maxAge: this.configService.get<number>('COOKIE_ACCESS_MAX_AGE'),
-    });
-
-    res.cookie('refreshToken', tokens.refreshToken, {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: 'strict',
-      maxAge: this.configService.get<number>('COOKIE_REFRESH_MAX_AGE'),
-    });
+    return {
+      ...tokens,
+      expiresIn: this.configService.get<number>('COOKIE_ACCESS_MAX_AGE'),
+      refreshExpiresIn: this.configService.get<number>(
+        'COOKIE_REFRESH_MAX_AGE',
+      ),
+    };
   }
 }
