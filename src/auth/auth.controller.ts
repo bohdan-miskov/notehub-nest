@@ -6,7 +6,6 @@ import {
   HttpStatus,
   Post,
   Req,
-  Res,
   UseGuards,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
@@ -35,12 +34,9 @@ export class AuthController {
     description: 'User with this email already exists.',
   })
   @Post('register')
-  async register(
-    @Body() registerDto: RegisterDto,
-    @Res({ passthrough: true }) res: Response,
-  ) {
+  async register(@Body() registerDto: RegisterDto) {
     const tokens = await this.authService.register(registerDto);
-    return this._setCookies(res, tokens);
+    return this._setTokens(tokens);
   }
 
   @ApiResponse({ status: 200, description: 'User successfully logged in.' })
@@ -54,12 +50,9 @@ export class AuthController {
   })
   @HttpCode(HttpStatus.OK)
   @Post('login')
-  async login(
-    @Body() loginDto: LoginDto,
-    @Res({ passthrough: true }) res: Response,
-  ) {
+  async login(@Body() loginDto: LoginDto) {
     const tokens = await this.authService.login(loginDto);
-    return this._setCookies(res, tokens);
+    return this._setTokens(tokens);
   }
 
   @ApiResponse({ status: 200, description: 'User successfully logged out.' })
@@ -85,23 +78,17 @@ export class AuthController {
   @UseGuards(AuthGuard('jwt-refresh'))
   @HttpCode(HttpStatus.OK)
   @Post('refresh')
-  async refreshTokens(
-    @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
-  ) {
+  async refreshTokens(@Req() req: Request) {
     const refreshToken = req.user?.refreshToken as string;
     if (!refreshToken) {
       throw new ForbiddenException('Refresh token not found');
     }
 
     const tokens = await this.authService.refreshTokens(refreshToken);
-    return this._setCookies(res, tokens);
+    return this._setTokens(tokens);
   }
 
-  private _setCookies(
-    res: Response,
-    tokens: { accessToken: string; refreshToken: string },
-  ) {
+  private _setTokens(tokens: { accessToken: string; refreshToken: string }) {
     return {
       ...tokens,
       expiresIn: this.configService.get<number>('COOKIE_ACCESS_MAX_AGE'),
