@@ -24,10 +24,16 @@ describe('AuthController', () => {
   let mockAuthService: MockService<AuthService>;
 
   let mockRequest: Request;
-  let mockResponse: Response;
 
   const refreshToken = 'refreshToken';
   const accessToken = 'accessToken';
+
+  const expectedResponse = {
+    accessToken: expect.any(String) as string,
+    expiresIn: expect.any(Number) as number,
+    refreshToken: expect.any(String) as string,
+    refreshExpiresIn: expect.any(Number) as number,
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -54,15 +60,10 @@ describe('AuthController', () => {
     mockAuthService = module.get(AuthService);
 
     mockRequest = {
-      cookies: {
+      user: {
         refreshToken: 'refreshToken',
       },
     } as unknown as Request;
-
-    mockResponse = {
-      cookie: jest.fn().mockReturnThis(),
-      clearCookie: jest.fn().mockReturnThis(),
-    } as unknown as Response;
   });
 
   it('should be defined', () => {
@@ -82,22 +83,10 @@ describe('AuthController', () => {
         refreshToken,
       });
 
-      const result = await controller.register(registerDto, mockResponse);
-      expect(result).toEqual({
-        message: 'Registration successful',
-      });
+      const result = await controller.register(registerDto);
+      expect(result).toEqual(expectedResponse);
 
       expect(mockAuthService.register).toHaveBeenCalledWith(registerDto);
-      expect((mockResponse as Partial<Response>).cookie).toHaveBeenCalledWith(
-        'accessToken',
-        accessToken,
-        expect.any(Object) as object,
-      );
-      expect((mockResponse as Partial<Response>).cookie).toHaveBeenCalledWith(
-        'refreshToken',
-        refreshToken,
-        expect.any(Object) as object,
-      );
     });
   });
   describe('login', () => {
@@ -112,40 +101,22 @@ describe('AuthController', () => {
         refreshToken,
       });
 
-      const result = await controller.login(loginDto, mockResponse);
-      expect(result).toEqual({
-        message: 'Login successful',
-      });
+      const result = await controller.login(loginDto);
+      expect(result).toEqual(expectedResponse);
 
       expect(mockAuthService.login).toHaveBeenCalledWith(loginDto);
-      expect((mockResponse as Partial<Response>).cookie).toHaveBeenCalledWith(
-        'accessToken',
-        accessToken,
-        expect.any(Object) as object,
-      );
-      expect((mockResponse as Partial<Response>).cookie).toHaveBeenCalledWith(
-        'refreshToken',
-        refreshToken,
-        expect.any(Object) as object,
-      );
     });
   });
   describe('logout', () => {
     it('should successfully logout user', async () => {
-      const result = await controller.logout(mockRequest, mockResponse);
+      const result = await controller.logout(mockRequest);
       expect(result).toEqual({
         message: 'Logout successful',
       });
 
       expect(mockAuthService.logout).toHaveBeenCalledWith(
-        mockRequest.cookies.refreshToken,
+        mockRequest.user?.refreshToken,
       );
-      expect(
-        (mockResponse as Partial<Response>).clearCookie,
-      ).toHaveBeenCalledWith('accessToken');
-      expect(
-        (mockResponse as Partial<Response>).clearCookie,
-      ).toHaveBeenCalledWith('refreshToken');
     });
   });
   describe('refresh', () => {
@@ -155,31 +126,21 @@ describe('AuthController', () => {
         refreshToken,
       });
 
-      const result = await controller.refreshTokens(mockRequest, mockResponse);
-      expect(result).toEqual({ message: 'Tokens refreshed' });
+      const result = await controller.refreshTokens(mockRequest);
+      expect(result).toEqual(expectedResponse);
 
       expect(mockAuthService.refreshTokens).toHaveBeenCalledWith(
-        mockRequest.cookies.refreshToken,
-      );
-      expect((mockResponse as Partial<Response>).cookie).toHaveBeenCalledWith(
-        'accessToken',
-        accessToken,
-        expect.any(Object) as object,
-      );
-      expect((mockResponse as Partial<Response>).cookie).toHaveBeenCalledWith(
-        'refreshToken',
-        refreshToken,
-        expect.any(Object) as object,
+        mockRequest.user?.refreshToken,
       );
     });
     it('should throw ForbiddenException if refreshToken not exist', async () => {
       const badMockRequest = {
-        cookies: {},
+        user: {},
       } as unknown as Request;
 
-      await expect(
-        controller.refreshTokens(badMockRequest, mockResponse),
-      ).rejects.toThrow(ForbiddenException);
+      await expect(controller.refreshTokens(badMockRequest)).rejects.toThrow(
+        ForbiddenException,
+      );
     });
   });
 });
