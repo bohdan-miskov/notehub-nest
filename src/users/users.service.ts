@@ -14,8 +14,19 @@ export class UsersService {
     private readonly userRepository: Repository<User>,
   ) {}
 
-  async create(createUserDto: CreateUserDto): Promise<User> {
-    const user = this.userRepository.create(createUserDto);
+  async create(
+    createUserDto: CreateUserDto,
+    avatar?: Express.Multer.File,
+  ): Promise<User> {
+    const userData = {
+      ...createUserDto,
+    };
+
+    if (avatar) {
+      userData.avatar = await this.filesService.uploadFile(avatar);
+    }
+
+    const user = this.userRepository.create(userData);
     return this.userRepository.save(user);
   }
 
