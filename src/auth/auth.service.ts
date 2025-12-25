@@ -24,7 +24,7 @@ export class AuthService {
     private readonly configService: ConfigService,
   ) {}
 
-  async register(registerDto: RegisterDto) {
+  async register(registerDto: RegisterDto, avatar?: Express.Multer.File) {
     const { email, password } = registerDto;
 
     const existingUser = await this.usersService.findOneByEmail(email);
@@ -33,10 +33,13 @@ export class AuthService {
     }
 
     const hashedPassword = await this._hashPassword(password);
-    const user = await this.usersService.create({
-      ...registerDto,
-      password: hashedPassword,
-    });
+    const user = await this.usersService.create(
+      {
+        ...registerDto,
+        password: hashedPassword,
+      },
+      avatar,
+    );
 
     const tokens = await this._getAndSaveTokens(user);
     return tokens;
@@ -81,6 +84,42 @@ export class AuthService {
     await this.sessionsService.removeByHash(hashedToken);
 
     const tokens = this._getAndSaveTokens(session.user);
+    return tokens;
+  }
+
+  async validateOAuthUser(
+    googleDto: Omit<RegisterDto, 'password'>,
+    avatar?: string,
+  ) {
+    const { email } = googleDto;
+    const existingUser = await this.usersService.findOneByEmail(email);
+
+    if (existingUser) {
+      return existingUser;
+    }
+
+    const hashedPassword = await bcrypt.hash(
+      crypto.randomBytes(30).toString('base64'),
+      10,
+    );
+
+    const userData = {
+      ...googleDto,
+      password: hashedPassword,
+      avatar,
+    };
+
+    return await this.usersService.create(userData);
+  }
+
+  async loginOAuth({ email }: { email: string }) {
+    const user = await this.usersService.findOneByEmail(email);
+
+    if (!user) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const tokens = await this._getAndSaveTokens(user);
     return tokens;
   }
 
