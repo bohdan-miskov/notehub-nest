@@ -6,6 +6,9 @@ import {
   HttpStatus,
   Post,
   Req,
+  Res,
+  UnauthorizedException,
+  UploadedFile,
   UseGuards,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
@@ -15,6 +18,7 @@ import { type Request, type Response } from 'express';
 import { LoginDto } from './dto/login.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiCookieAuth, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ParseImagePipe } from 'src/common/pipes/parse-image.pipe';
 
 @ApiTags('1. Auth')
 @Controller('auth')
@@ -34,8 +38,11 @@ export class AuthController {
     description: 'User with this email already exists.',
   })
   @Post('register')
-  async register(@Body() registerDto: RegisterDto) {
-    const tokens = await this.authService.register(registerDto);
+  async register(
+    @Body() registerDto: RegisterDto,
+    @UploadedFile(new ParseImagePipe()) avatar?: Express.Multer.File,
+  ) {
+    const tokens = await this.authService.register(registerDto, avatar);
     return this._setTokens(tokens);
   }
 
@@ -86,6 +93,26 @@ export class AuthController {
 
     const tokens = await this.authService.refreshTokens(refreshToken);
     return this._setTokens(tokens);
+  }
+
+  @UseGuards(AuthGuard('google'))
+  @Post('get-google-oauth')
+  async getGoogleOauth() {}
+
+  @UseGuards(AuthGuard('google'))
+  @Post('confirm-google-oauth')
+  async confirmGoogleOauth(@Req() req: Request, @Res() res: Response) {
+    const user = req.user;
+    if (!user) {
+      throw new UnauthorizedException('OAuth error');
+    }
+    const tokens = await this.authService.loginOAuth(user);
+
+    const nextServerUrl = this.configService.get<string>('NEXT_SERVER_URL');
+    const redirectUrl = new URL(`${nextServerUrl}/api/auth/callback`);
+    redirectUrl.searchParams.append('accessToken', tokens.accessToken);
+    redirectUrl.searchParams.append('refreshToken', tokens.refreshToken);
+    return res.redirect(redirectUrl.toString());
   }
 
   private _setTokens(tokens: { accessToken: string; refreshToken: string }) {
