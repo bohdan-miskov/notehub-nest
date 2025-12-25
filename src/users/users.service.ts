@@ -4,10 +4,12 @@ import { User } from './entities/user.entity';
 import { Repository } from 'typeorm';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { FilesService } from 'src/files/files.service';
 
 @Injectable()
 export class UsersService {
   constructor(
+    private readonly filesService: FilesService,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
   ) {}
@@ -33,11 +35,16 @@ export class UsersService {
     return user;
   }
 
-  async update(id: number, updateUserDto: UpdateUserDto): Promise<User> {
-    const user = await this.userRepository.preload({
-      id,
-      ...updateUserDto,
-    });
+  async update(
+    id: number,
+    updateUserDto: UpdateUserDto,
+    avatar?: Express.Multer.File,
+  ): Promise<User> {
+    const updateData: Partial<User> = { id, ...updateUserDto };
+    if (avatar) {
+      updateData.avatar = await this.filesService.uploadFile(avatar);
+    }
+    const user = await this.userRepository.preload(updateData);
 
     if (!user) {
       throw new NotFoundException(`User with ID #${id} not found`);
