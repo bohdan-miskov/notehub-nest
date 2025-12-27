@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   ForbiddenException,
+  Get,
   HttpCode,
   HttpStatus,
   Post,
@@ -96,22 +97,35 @@ export class AuthController {
   }
 
   @UseGuards(AuthGuard('google'))
-  @Post('get-google-oauth')
+  @Get('get-google-oauth')
   async getGoogleOauth() {}
 
   @UseGuards(AuthGuard('google'))
-  @Post('confirm-google-oauth')
+  @Get('confirm-google-oauth')
   async confirmGoogleOauth(@Req() req: Request, @Res() res: Response) {
     const user = req.user;
     if (!user) {
       throw new UnauthorizedException('OAuth error');
     }
     const tokens = await this.authService.loginOAuth(user);
+    const tokensData = this._setTokens(tokens);
 
     const nextServerUrl = this.configService.get<string>('NEXT_SERVER_URL');
-    const redirectUrl = new URL(`${nextServerUrl}/api/auth/callback`);
-    redirectUrl.searchParams.append('accessToken', tokens.accessToken);
-    redirectUrl.searchParams.append('refreshToken', tokens.refreshToken);
+    const redirectUrl = new URL(`${nextServerUrl}/api/auth/set-oauth`);
+    redirectUrl.searchParams.append('accessToken', tokensData.accessToken);
+    if (tokensData.expiresIn) {
+      redirectUrl.searchParams.append(
+        'expiresIn',
+        tokensData.expiresIn.toString(),
+      );
+    }
+    redirectUrl.searchParams.append('refreshToken', tokensData.refreshToken);
+    if (tokensData.refreshExpiresIn) {
+      redirectUrl.searchParams.append(
+        'refreshExpiresIn',
+        tokensData.refreshExpiresIn.toString(),
+      );
+    }
     return res.redirect(redirectUrl.toString());
   }
 
