@@ -88,8 +88,7 @@ export class AuthService {
   }
 
   async validateOAuthUser(
-    googleDto: Omit<RegisterDto, 'password'>,
-    avatar?: string,
+    googleDto: Omit<RegisterDto, 'password'> & { avatar?: string },
   ) {
     const { email } = googleDto;
     const existingUser = await this.usersService.findOneByEmail(email);
@@ -106,7 +105,6 @@ export class AuthService {
     const userData = {
       ...googleDto,
       password: hashedPassword,
-      avatar,
     };
 
     return await this.usersService.create(userData);
