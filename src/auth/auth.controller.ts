@@ -2,11 +2,14 @@ import {
   Body,
   Controller,
   ForbiddenException,
+  Get,
   HttpCode,
   HttpStatus,
   Post,
   Req,
   Res,
+  UnauthorizedException,
+  UploadedFile,
   UseGuards,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
@@ -16,6 +19,7 @@ import { type Request, type Response } from 'express';
 import { LoginDto } from './dto/login.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiCookieAuth, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ParseImagePipe } from 'src/common/pipes/parse-image.pipe';
 
 @ApiTags('1. Auth')
 @Controller('auth')
@@ -37,11 +41,10 @@ export class AuthController {
   @Post('register')
   async register(
     @Body() registerDto: RegisterDto,
-    @Res({ passthrough: true }) res: Response,
+    @UploadedFile(new ParseImagePipe()) avatar?: Express.Multer.File,
   ) {
-    const tokens = await this.authService.register(registerDto);
-    this._setCookies(res, tokens);
-    return { message: 'Registration successful' };
+    const tokens = await this.authService.register(registerDto, avatar);
+    return this._setTokens(tokens);
   }
 
   @ApiResponse({ status: 200, description: 'User successfully logged in.' })
@@ -55,28 +58,22 @@ export class AuthController {
   })
   @HttpCode(HttpStatus.OK)
   @Post('login')
-  async login(
-    @Body() loginDto: LoginDto,
-    @Res({ passthrough: true }) res: Response,
-  ) {
+  async login(@Body() loginDto: LoginDto) {
     const tokens = await this.authService.login(loginDto);
-    this._setCookies(res, tokens);
-    return { message: 'Login successful' };
+    return this._setTokens(tokens);
   }
 
   @ApiResponse({ status: 200, description: 'User successfully logged out.' })
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(AuthGuard('jwt-refresh'))
   @HttpCode(HttpStatus.OK)
   @Post('logout')
-  async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    const refreshToken = req.cookies.refreshToken as string;
+  async logout(@Req() req: Request) {
+    const refreshToken = req.user?.refreshToken as string;
 
     if (refreshToken) {
       await this.authService.logout(refreshToken);
     }
 
-    res.clearCookie('accessToken');
-    res.clearCookie('refreshToken');
     return { message: 'Logout successful' };
   }
 
@@ -89,39 +86,56 @@ export class AuthController {
   @UseGuards(AuthGuard('jwt-refresh'))
   @HttpCode(HttpStatus.OK)
   @Post('refresh')
-  async refreshTokens(
-    @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
-  ) {
-    const refreshToken = req.cookies.refreshToken as string;
+  async refreshTokens(@Req() req: Request) {
+    const refreshToken = req.user?.refreshToken as string;
     if (!refreshToken) {
       throw new ForbiddenException('Refresh token not found');
     }
 
     const tokens = await this.authService.refreshTokens(refreshToken);
-    this._setCookies(res, tokens);
-    return { message: 'Tokens refreshed' };
+    return this._setTokens(tokens);
   }
 
-  private _setCookies(
-    res: Response,
-    tokens: { accessToken: string; refreshToken: string },
-  ) {
-    const isProduction =
-      this.configService.get<string>('NODE_ENV') === 'production';
+  @UseGuards(AuthGuard('google'))
+  @Get('get-google-oauth')
+  async getGoogleOauth() {}
 
-    res.cookie('accessToken', tokens.accessToken, {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: 'strict',
-      maxAge: this.configService.get<number>('COOKIE_ACCESS_MAX_AGE'),
-    });
+  @UseGuards(AuthGuard('google'))
+  @Get('confirm-google-oauth')
+  async confirmGoogleOauth(@Req() req: Request, @Res() res: Response) {
+    const user = req.user;
+    if (!user) {
+      throw new UnauthorizedException('OAuth error');
+    }
+    const tokens = await this.authService.loginOAuth(user);
+    const tokensData = this._setTokens(tokens);
 
-    res.cookie('refreshToken', tokens.refreshToken, {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: 'strict',
-      maxAge: this.configService.get<number>('COOKIE_REFRESH_MAX_AGE'),
-    });
+    const nextServerUrl = this.configService.get<string>('NEXT_SERVER_URL');
+    const redirectUrl = new URL(`${nextServerUrl}/api/auth/set-oauth`);
+    redirectUrl.searchParams.append('accessToken', tokensData.accessToken);
+    if (tokensData.expiresIn) {
+      redirectUrl.searchParams.append(
+        'expiresIn',
+        tokensData.expiresIn.toString(),
+      );
+    }
+    redirectUrl.searchParams.append('refreshToken', tokensData.refreshToken);
+    if (tokensData.refreshExpiresIn) {
+      redirectUrl.searchParams.append(
+        'refreshExpiresIn',
+        tokensData.refreshExpiresIn.toString(),
+      );
+    }
+    return res.redirect(redirectUrl.toString());
+  }
+
+  private _setTokens(tokens: { accessToken: string; refreshToken: string }) {
+    return {
+      ...tokens,
+      expiresIn: this.configService.get<number>('COOKIE_ACCESS_MAX_AGE'),
+      refreshExpiresIn: this.configService.get<number>(
+        'COOKIE_REFRESH_MAX_AGE',
+      ),
+    };
   }
 }

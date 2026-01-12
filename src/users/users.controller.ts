@@ -1,10 +1,21 @@
-import { Body, Controller, Get, Patch, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Patch,
+  Req,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { type Request } from 'express';
 import { ApiCookieAuth, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { User } from './entities/user.entity';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ParseImagePipe } from 'src/common/pipes/parse-image.pipe';
 
 @ApiTags('3. Users')
 @ApiCookieAuth('accessToken')
@@ -42,8 +53,13 @@ export class UsersController {
     description: 'User not found',
   })
   @Patch('me')
-  update(@Body() updateUserDto: UpdateUserDto, @Req() req: Request) {
+  @UseInterceptors(FileInterceptor('avatar'))
+  update(
+    @Body() updateUserDto: UpdateUserDto,
+    @Req() req: Request,
+    @UploadedFile(new ParseImagePipe()) avatar?: Express.Multer.File,
+  ) {
     const userId = req.user?.id as number;
-    return this.usersService.update(userId, updateUserDto);
+    return this.usersService.update(userId, updateUserDto, avatar);
   }
 }

@@ -2,18 +2,20 @@ import { INestApplication } from '@nestjs/common';
 import { createTestApp, TestApp } from './utils/setup';
 import request from 'supertest';
 import { App } from 'supertest/types';
-import { registerUser } from './utils/helpers';
+import { createBearerAuth, registerUser } from './utils/helpers';
 import { Note } from 'src/notes/entities/note.entity';
 import { NoteTag } from 'src/notes/enums/note-tag.enum';
 import { CreateNoteDto } from 'src/notes/dto/create-note.dto';
 import { createPaginatedResponse } from 'src/common/utils/pagination';
 import { UpdateNoteDto } from 'src/notes/dto/update-note.dto';
+import { ResponseTokens } from './types/tokens.types';
 
 describe('NotesModule (e2e)', () => {
   let testApp: TestApp;
   let app: INestApplication;
-  let userCookies: string[];
+  let userTokens: ResponseTokens;
   let createdNoteId: number;
+  let bearer: string;
 
   const responseNote = {
     id: expect.any(Number) as number,
@@ -37,7 +39,8 @@ describe('NotesModule (e2e)', () => {
     app = testApp.app;
     await testApp.cleanup();
 
-    userCookies = await registerUser(app);
+    userTokens = await registerUser(app);
+    bearer = createBearerAuth(userTokens.accessToken);
   });
 
   afterAll(async () => {
@@ -48,7 +51,7 @@ describe('NotesModule (e2e)', () => {
     it('should create a new note (201)', () => {
       return request(app.getHttpServer() as App)
         .post('/notes')
-        .set('Cookie', userCookies)
+        .set('Authorization', bearer)
         .send(createNoteDto)
         .expect(201)
         .expect((res) => {
@@ -59,7 +62,7 @@ describe('NotesModule (e2e)', () => {
     it('should get a list of notes with pagination (200)', () => {
       return request(app.getHttpServer() as App)
         .get('/notes')
-        .set('Cookie', userCookies)
+        .set('Authorization', bearer)
         .expect(200)
         .expect((res) => {
           const expectedResponse = createPaginatedResponse<Note>(
@@ -73,7 +76,7 @@ describe('NotesModule (e2e)', () => {
     it('should get a single note by ID (200)', () => {
       return request(app.getHttpServer() as App)
         .get(`/notes/${createdNoteId}`)
-        .set('Cookie', userCookies)
+        .set('Authorization', bearer)
         .expect(200)
         .expect((res) => {
           expect(res.body).toEqual(responseNote);
@@ -82,7 +85,7 @@ describe('NotesModule (e2e)', () => {
     it('should update the note title and content (200)', async () => {
       const prevResponse = await request(app.getHttpServer() as App)
         .get(`/notes/${createdNoteId}`)
-        .set('Cookie', userCookies)
+        .set('Authorization', bearer)
         .expect(200);
 
       const prevBody = prevResponse.body as unknown as { updatedAt: string };
@@ -96,7 +99,7 @@ describe('NotesModule (e2e)', () => {
       };
       return request(app.getHttpServer() as App)
         .patch(`/notes/${createdNoteId}`)
-        .set('Cookie', userCookies)
+        .set('Authorization', bearer)
         .send(updateNoteDto)
         .expect(200)
         .expect((res) => {
@@ -115,7 +118,7 @@ describe('NotesModule (e2e)', () => {
     it('should delete the note (204)', () => {
       return request(app.getHttpServer() as App)
         .delete(`/notes/${createdNoteId}`)
-        .set('Cookie', userCookies)
+        .set('Authorization', bearer)
         .expect(204)
         .expect((res) => {
           expect(res.body).toEqual({});
@@ -124,7 +127,7 @@ describe('NotesModule (e2e)', () => {
     it('should return 404 when trying to get the deleted note', () => {
       return request(app.getHttpServer() as App)
         .delete(`/notes/${createdNoteId}`)
-        .set('Cookie', userCookies)
+        .set('Authorization', bearer)
         .expect(404);
     });
   });
@@ -133,20 +136,23 @@ describe('NotesModule (e2e)', () => {
     it('should fail to create note with empty title (400)', () => {
       return request(app.getHttpServer() as App)
         .post('/notes')
-        .set('Cookie', userCookies)
+        .set('Authorization', bearer)
         .send({ ...createNoteDto, title: '' })
         .expect(400);
     });
   });
 
   describe('Security (Access Control)', () => {
-    let newUserCookies: string[];
+    let newUserTokens: ResponseTokens;
+
+    let newBearer: string;
     beforeAll(async () => {
-      newUserCookies = await registerUser(app);
+      newUserTokens = await registerUser(app);
+      newBearer = createBearerAuth(newUserTokens.accessToken);
 
       const response = await request(app.getHttpServer() as App)
         .post('/notes')
-        .set('Cookie', userCookies)
+        .set('Authorization', bearer)
         .send(createNoteDto)
         .expect(201);
       const body = response.body as { id: number };
@@ -156,7 +162,7 @@ describe('NotesModule (e2e)', () => {
     it("should forbid User B from viewing User A's note (404)", () => {
       return request(app.getHttpServer() as App)
         .get(`/notes/${createdNoteId}`)
-        .set('Cookie', newUserCookies)
+        .set('Authorization', newBearer)
         .expect(404);
     });
 
@@ -167,14 +173,14 @@ describe('NotesModule (e2e)', () => {
 
       return request(app.getHttpServer() as App)
         .patch(`/notes/${createdNoteId}`)
-        .set('Cookie', newUserCookies)
+        .set('Authorization', newBearer)
         .send(updateNoteDto)
         .expect(404);
     });
     it("should forbid User B from deleting User A's note (404)", () => {
       return request(app.getHttpServer() as App)
         .delete(`/notes/${createdNoteId}`)
-        .set('Cookie', newUserCookies)
+        .set('Authorization', newBearer)
         .expect(404);
     });
   });

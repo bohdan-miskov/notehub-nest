@@ -6,6 +6,7 @@ import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { SessionsModule } from './sessions/sessions.module';
 import { AppController } from './app.controller';
+import { FilesModule } from './files/files.module';
 
 @Module({
   imports: [
@@ -21,15 +22,16 @@ import { AppController } from './app.controller';
         url: configService.getOrThrow<string>('DATABASE_URL'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
         synchronize: false,
-        ssl: {
-          rejectUnauthorized: false,
-        },
+        // ssl: {
+        //   rejectUnauthorized: false,
+        // },
       }),
     }),
     AuthModule,
     NotesModule,
     UsersModule,
     SessionsModule,
+    FilesModule,
   ],
   controllers: [AppController],
 })

@@ -4,12 +4,13 @@ import { RegisterDto } from 'src/auth/dto/register.dto';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { LoginDto } from 'src/auth/dto/login.dto';
-import { getCookies } from './utils/helpers';
+import { ResponseTokens } from './types/tokens.types';
+import { createBearerAuth } from './utils/helpers';
 
 describe('AuthModule (e2e)', () => {
   let testApp: TestApp;
   let app: INestApplication;
-  let userCookies: string[];
+  let userTokens: ResponseTokens;
 
   const uniqueId = Date.now();
 
@@ -17,6 +18,13 @@ describe('AuthModule (e2e)', () => {
     name: 'testUser',
     email: `test${uniqueId}@mock.com`,
     password: 'mockPassword',
+  };
+
+  const expectedTokensResponse = {
+    accessToken: expect.any(String) as string,
+    expiresIn: expect.any(String) as number,
+    refreshToken: expect.any(String) as string,
+    refreshExpiresIn: expect.any(String) as number,
   };
 
   beforeAll(async () => {
@@ -38,13 +46,10 @@ describe('AuthModule (e2e)', () => {
         .send(registerDto)
         .expect(201)
         .expect((res) => {
-          const body = res.body as { message: string };
-          userCookies = getCookies(res);
+          const body = res.body as ResponseTokens;
+          userTokens = body;
 
-          expect(body?.message).toBe('Registration successful');
-          expect(userCookies).toBeDefined();
-          expect(userCookies.some((c) => c.includes('accessToken')));
-          expect(userCookies.some((c) => c.includes('refreshToken')));
+          expect(body).toEqual(expectedTokensResponse);
         });
     });
     it('should fail if email already exists (409)', () => {
@@ -68,13 +73,10 @@ describe('AuthModule (e2e)', () => {
         .send(loginDto)
         .expect(200)
         .expect((res) => {
-          const body = res.body as { message: string };
-          userCookies = getCookies(res);
+          const body = res.body as ResponseTokens;
+          userTokens = body;
 
-          expect(body.message).toBe('Login successful');
-          expect(userCookies).toBeDefined();
-          expect(userCookies.some((c) => c.includes('accessToken')));
-          expect(userCookies.some((c) => c.includes('refreshToken')));
+          expect(body).toEqual(expectedTokensResponse);
         });
     });
     it('should fail with wrong password (401)', () => {
@@ -92,18 +94,16 @@ describe('AuthModule (e2e)', () => {
 
   describe('/auth/refresh', () => {
     it('should return new tokens using valid Refresh Token cookie (200)', () => {
+      const bearer = createBearerAuth(userTokens.refreshToken);
       return request(app.getHttpServer() as App)
         .post('/auth/refresh')
-        .set('Cookie', userCookies)
+        .set('Authorization', bearer)
         .expect(200)
         .expect((res) => {
-          const body = res.body as { message: string };
-          userCookies = getCookies(res);
+          const body = res.body as ResponseTokens;
+          userTokens = body;
 
-          expect(body.message).toBe('Tokens refreshed');
-          expect(userCookies).toBeDefined();
-          expect(userCookies.some((c) => c.includes('accessToken')));
-          expect(userCookies.some((c) => c.includes('refreshToken')));
+          expect(body).toEqual(expectedTokensResponse);
         });
     });
     it('should fail if Refresh Token is missing or invalid (401)', () => {
@@ -115,25 +115,23 @@ describe('AuthModule (e2e)', () => {
 
   describe('/auth/logout', () => {
     it('should clear cookies from response headers (200)', () => {
+      const bearer = createBearerAuth(userTokens.refreshToken);
       return request(app.getHttpServer() as App)
         .post('/auth/logout')
-        .set('Cookie', userCookies)
+        .set('Authorization', bearer)
         .expect(200)
         .expect((res) => {
           const body = res.body as { message: string };
 
-          userCookies = getCookies(res);
           expect(body.message).toBe('Logout successful');
-          expect(userCookies).toBeDefined();
-          expect(userCookies.some((c) => c.includes('accessToken=;')));
-          expect(userCookies.some((c) => c.includes('refreshToken=;')));
         });
     });
-    it('should fail to refresh tokens after logout (401)', () => {
+    it('should fail to refresh tokens after logout (403)', () => {
+      const bearer = createBearerAuth(userTokens.refreshToken);
       return request(app.getHttpServer() as App)
         .post('/auth/refresh')
-        .set('Cookie', userCookies)
-        .expect(401);
+        .set('Authorization', bearer)
+        .expect(403);
     });
   });
 });

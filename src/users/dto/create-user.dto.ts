@@ -1,4 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsOptional } from 'class-validator';
 
 export class CreateUserDto {
   @ApiProperty({
@@ -6,6 +7,13 @@ export class CreateUserDto {
     description: "User's first name",
   })
   name: string;
+
+  @ApiPropertyOptional({
+    example: 'https://gallery/avatar1.jpg',
+    description: "User's avatar url",
+  })
+  @IsOptional()
+  avatar?: string;
 
   @ApiProperty({
     example: 'user@example.com',
